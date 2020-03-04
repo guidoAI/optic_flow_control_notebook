@@ -108,6 +108,7 @@ def control_with_delay(time_steps_delay=3):
     
     # simulate the system:
     states_over_time = np.zeros([n_time_steps, n_states]);
+    u = np.zeros([n_time_steps, 1]);
     for t_index, t in enumerate(time_steps):
         
         # determine the error = desired divergence - observed divergence
@@ -117,17 +118,17 @@ def control_with_delay(time_steps_delay=3):
         else:
             err = 0;
         # determine the control input = vertical acceleration with a P-gain:
-        u = P * err;
+        u[t_index] = P * err;
         # set the argument passed to f_ZOH to the determined control input:
-        r.set_f_params(u);
+        r.set_f_params(u[t_index]);
         # determine the next state using the ode:
         x = r.integrate(r.t+dt);
         # store the states over time for plotting:
         states_over_time[t_index, :] = x;
         
-    return states_over_time;
+    return states_over_time, u;
 
-def plot_states_over_time(states_over_time, time_steps, plot_title=''):
+def plot_states_over_time(states_over_time, time_steps, plot_title='', u=[]):
     """ Plot the states over time.
     """
     
@@ -152,13 +153,33 @@ def plot_states_over_time(states_over_time, time_steps, plot_title=''):
         plt.title(plot_title);
     
     # Height and vertical velocity over time:
-    plt.figure();
+    fig = plt.figure();
     plt.plot(states_over_time[:,1], states_over_time[:,0]);
+    ax = fig.gca();
+    grid_step_z = 0.5;
+    grid_step_vz = 0.25;
+    ax.set_xticks(np.arange(round(min(states_over_time[:,1])), round(max(states_over_time[:,1]))+1.0, grid_step_vz));
+    ax.set_yticks(np.arange(round(min(states_over_time[:,0])), round(max(states_over_time[:,0]))+1.0, grid_step_z));
+    #ax.axis('equal');
     plt.xlabel('v_z [m/s]');
     plt.ylabel('z [m]')
+    plt.grid();
     if(plot_title != ''):
         plt.title(plot_title);
-
+    
+    if len(u) > 0:
+        fig_u = plt.figure();
+        plt.plot(time_steps, u, label='u');    
+        ax = fig_u.gca();
+        grid_step_t = 0.5;
+        ax.set_xticks(np.arange(round(min(time_steps)), round(max(time_steps))+1.0, grid_step_t));
+        plt.xlabel('Time [s]');
+        plt.ylabel('u [m/s^2]')
+        plt.legend();
+        plt.grid();
+        if(plot_title != ''):
+            plt.title(plot_title);
+            
     
 if __name__ == '__main__':
     # ********************************************************
@@ -210,6 +231,6 @@ if __name__ == '__main__':
     
     if(DELAY):
         # control with delay:
-        states_over_time = control_with_delay(time_steps_delay = 3);
-        plot_states_over_time(states_over_time, time_steps, plot_title='control with delay')
+        states_over_time, u = control_with_delay(time_steps_delay = 3);
+        plot_states_over_time(states_over_time, time_steps, plot_title='control with delay', u = u);
     
